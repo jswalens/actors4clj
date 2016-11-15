@@ -17,14 +17,12 @@
                 (stm/dosync
                   (log "my sum:" i "+ 1 - total sum:" (stm/deref sum) "+ 1")
                   (stm/alter sum + 1)
-                  (become nil [(+ i 1)]))
-                  ; XXX nil is there cause clj does not have letrec
-                  ; TODO find a nicer way to self-reference
+                  (become :self [(+ i 1)]))
               [:add j]
                 (stm/dosync
                   (log "my sum:" i "+" j "- total sum:" (stm/deref sum) "+" j)
                   (stm/alter sum + j)
-                  (become nil [(+ i j)])))
+                  (become :self [(+ i j)])))
           counter1 (actor/spawn counter [0])
           counter2 (actor/spawn counter [0])]
     (actor/send counter1 :inc)
@@ -51,7 +49,7 @@
               [:check]
                 (is (= 100 i))
               [:inc]
-                (become nil [(inc i)]))
+                (become :self [(inc i)]))
           receiver-actor (actor/spawn receiver [0])
           sender
             (actor/behavior []
@@ -84,14 +82,12 @@
                 (stm/dosync
                   (log "my sum:" i "+ 1 - total sum:" (stm/deref sum) "+ 1")
                   (stm/alter sum + 1)
-                  (become nil [(+ i 1)]))
-                  ; XXX nil is there cause clj does not have letrec
-                  ; TODO find a nicer way to self-reference
+                  (become :self [(+ i 1)]))
               [:add j]
                 (stm/dosync
                   (log "my sum:" i "+" j "- total sum:" (stm/deref sum) "+" j)
                   (stm/alter sum + j)
-                  (become nil [(+ i j)])))
+                  (become :self [(+ i j)])))
           spawner
             (actor/behavior []
               [:do]
@@ -117,7 +113,7 @@
               [:set-flag]
                 (stm/dosync
                   (when-not (stm/deref one-flag-set?)
-                    (become nil [true])
+                    (become :self [true])
                     (stm/ref-set one-flag-set? true)))
                   ; else: flag stays false, one-flag-set? stays true
               [:read-flag]

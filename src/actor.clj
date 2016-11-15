@@ -32,8 +32,8 @@
 (defmacro behavior [variables & patterns]
   (let [match-clauses (patterns->match-clauses patterns)]
     `(fn [msg# state#]
-      "Returns new behavior and state, or [nil nil] if the same behavior and
-      state can be kept."
+      "Returns new behavior and state, or [nil nil] (or [:self nil]) if the same
+      behavior and state can be kept."
       (let [~variables
               state#
             ; inject variables
@@ -44,7 +44,8 @@
               (atom [nil nil])
             ~'become
               (fn [behavior# state#]
-                (reset! new-behavior-and-state# [behavior# state#]))]
+                (let [behavior_# (if (= behavior# :self) nil behavior#)]
+                  (reset! new-behavior-and-state# [behavior_# state#])))]
             ; inject become
         (match [msg#]
           ~@match-clauses
