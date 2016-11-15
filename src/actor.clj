@@ -3,6 +3,7 @@
   (:require [clojure.core.async :as async :refer
               [chan go go-loop >! <! >!! <!! put! close! mult tap]]
             [clojure.core.match :refer [match]]
+            [stm]
             [log :refer [log]]))
 
 ; ******************************************************************************
@@ -41,16 +42,20 @@
             ; with variables = [x y z] and state# = [1 2 3] this is
             ; (let [[x y z] [1 2 3]] ...)
             new-behavior-and-state#
-              (atom [nil nil])
+              (stm/ref [nil nil])
             ~'become
               (fn [behavior# state#]
                 (let [behavior_# (if (= behavior# :self) nil behavior#)]
-                  (reset! new-behavior-and-state# [behavior_# state#])))]
+                  (stm/dosync
+                    ; If we're already in a transaction, this becomes part of
+                    ; the outer transaction; otherwise this simply sets the new
+                    ; behavior and state.
+                    (stm/ref-set new-behavior-and-state# [behavior_# state#]))))]
             ; inject become
         (match [msg#]
           ~@match-clauses
           :else (println "error: message" msg# "does not match any pattern"))
-        @new-behavior-and-state#))))
+        (stm/deref new-behavior-and-state#)))))
 
 (defmacro spawn [initial-behavior state]
   `(let [inbox# (chan)]
