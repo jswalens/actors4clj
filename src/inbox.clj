@@ -1,12 +1,12 @@
-(ns channel)
+(ns inbox)
 
-(defprotocol Channel
+(defprotocol Inbox
   (put [this msg])
   (take [this]))
 
-(defn channel []
+(defn inbox []
   (let [msgs (atom [])]
-    (reify Channel
+    (reify Inbox
       (put [this msg]
         (locking this
           (swap! msgs conj msg)
