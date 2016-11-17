@@ -1,8 +1,6 @@
 (ns actor
   (:refer-clojure :exclude [send])
-  (:require [clojure.core.async :as async :refer
-              [chan go go-loop >! <! >!! <!! put! close! mult tap]]
-            [clojure.core.match :refer [match]]
+  (:require [clojure.core.match :refer [match]]
             [stm]
             [log :refer [log]]))
 
@@ -84,15 +82,15 @@
         (stm/deref new-behavior-and-state#)))))
 
 (defmacro spawn [initial-behavior state]
-  `(let [inbox# (chan)]
-    (go
+  `(let [inbox# (inbox)]
+    (future
       (loop [behavior# ~initial-behavior
              state#    ~state]
-        (let [msg# (<! inbox#)
+        (let [msg# (inbox-take inbox#)
               ;_#   (log "| received" msg#)
               [new-behavior# new-state#] (behavior# msg# state#)]
           (recur (or new-behavior# behavior#) (or new-state# state#)))))
     inbox#))
 
 (defn send [actor & args]
-  (put! actor args))
+  (inbox-put actor args))
