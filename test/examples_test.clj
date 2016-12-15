@@ -1,4 +1,4 @@
-(ns actors-stm-test
+(ns examples-test
   (:require [clojure.test :refer :all]
             [log :refer [log]]
             [actor]
@@ -42,12 +42,15 @@
 (deftest summer-send
   (testing "SUMMER - PROBLEM WITH SEND"
     (let [contentious-ref (stm/ref 0)
+          check-success? (atom :unknown)
           receiver
             (actor/behavior [i]
               [:get]
                 (log "received" i "messages")
               [:check]
-                (is (= 100 i))
+                (do
+                  (is (= 100 i))
+                  (reset! check-success? (= 100 i)))
               [:inc]
                 (become :self [(inc i)]))
           receiver-actor (actor/spawn receiver [0])
@@ -64,7 +67,8 @@
       (Thread/sleep 1000)
       (actor/send receiver-actor :get) (Thread/sleep 10)
       (log "expected 100 messages received")
-      (actor/send receiver-actor :check) (Thread/sleep 10)))) ; this fails
+      (actor/send receiver-actor :check) (Thread/sleep 10) ; this fails
+      (is (= true @check-success?))))) ; ensure that test actually executed
       ; Since send is not reverted when a transaction is reverted, its effects
       ; remain visible after a rollback.
 
@@ -131,6 +135,7 @@
             t (count (filter true? @flags-at-the-end))
             f (count (filter false? @flags-at-the-end))]
         (log "true:" t "/" n "- false:" f "/" n)
+        (is (= 100 n))
         (is (= 1 t))
         (is (= (- n 1) f)))))) ; this fails
       ; Since become uses an atom, it is not reverted automatically when the
