@@ -31,6 +31,18 @@
       (dotimes [i 100]
         (is (= i (inbox-take in)))))))
 
+(deftest interleaved
+  (testing "interleaved puts and takes"
+    (let [in (inbox)]
+      (doseq [i (range 0 100)]
+        (inbox-put in i))
+      (doseq [i (range 0 50)]
+        (is (= i (inbox-take in))))
+      (doseq [i (range 100 150)]
+        (inbox-put in i))
+      (doseq [i (range 50 150)]
+        (is (= i (inbox-take in)))))))
+
 (deftest hundred-receivers
   (testing "1 sender, 100 receivers"
     (let [in (inbox)
