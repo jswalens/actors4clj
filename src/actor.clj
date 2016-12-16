@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [send])
   (:require [clojure.core.match :refer [match]]
             [stm]
-            [log :refer [log]]))
+            [log :refer [log]])
+  (:import [java.util.concurrent ConcurrentLinkedDeque]))
 
 ; ******************************************************************************
 ; * ACTORS INTERNALS                                                           *
@@ -28,26 +29,24 @@
   (inbox-take [this]))
 
 (defn inbox []
-  (let [msgs (atom [])]
+  (let [msgs (ConcurrentLinkedDeque.)]
     (reify Inbox
       (inbox-put [this msg]
-        (locking this
-          (swap! msgs conj msg)
-          (.notifyAll this)))
+        (locking msgs
+          (.add msgs msg)
+          (.notifyAll msgs)))
       (inbox-take [this]
-        (locking this
+        (locking msgs
           (loop []
-            (when (empty? @msgs)
-              (try
-                (.wait this)
-                (catch InterruptedException e
-                  nil)) ; recur below
-              (recur)))
-          (let [msg (first @msgs)]
-            (swap! msgs rest)
-            ; doing this in two steps is ok as we're locking `this` so it is
-            ; atomic anyway
-            msg))))))
+            (let [msg (.poll msgs)]
+              (if (some? msg)
+                msg
+                (do
+                  (try
+                    (.wait msgs)
+                    (catch InterruptedException e
+                      nil)) ; recur below
+                  (recur))))))))))
 
 
 ; ******************************************************************************
