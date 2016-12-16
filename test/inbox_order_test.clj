@@ -9,28 +9,26 @@
   (let [a (actor/behavior [b]
             [:do]
               (do
-                (actor/send b 1)
-                (actor/send b 2)))
+                (actor/send b :set 1)
+                (actor/send b :set 2)
+                (actor/send b :set 3)
+                (actor/send b :set 4)))
         b (actor/behavior [state]
-            [1]
+            [:set i]
               (do
-                (is (= state 0))
-                (become :self [1]))
-            [2]
-              (do
-                (is (= state 1))
-                (become :self [2]))
+                (is (= state (- i 1)))
+                (become :self [i]))
             [:get promise]
               (deliver promise state))
         bs (doall (repeatedly 100 #(actor/spawn b [0])))
         as (doall (map #(actor/spawn a [%]) bs))]
     (doseq [a as]
       (actor/send a :do))
-    (Thread/sleep 500)
+    (Thread/sleep 700)
     (doseq [b bs]
       (let [p (promise)]
         (actor/send b :get p)
-        (is (= 2 @p))))))
+        (is (= 4 @p))))))
 
 (deftest order-respected-direct-in-tx
   "Test whether messages are received in the same order they were sent."
@@ -39,31 +37,29 @@
             [:do]
               (do
                 (stm/dosync
-                  (actor/send b 1)
+                  (actor/send b :set 1)
                   (stm/alter n-a inc)
-                  (actor/send b 2)
+                  (actor/send b :set 2)
+                  (stm/alter n-a inc)
+                  (actor/send b :set 3)
                   (stm/alter n-a inc))))
         b (actor/behavior [state]
-            [1]
+            [:set i]
               (do
-                (is (= state 0))
-                (become :self [1]))
-            [2]
-              (do
-                (is (= state 1))
-                (become :self [2]))
+                (is (= state (- i 1)))
+                (become :self [i]))
             [:get promise]
               (deliver promise state))
         bs (doall (repeatedly 100 #(actor/spawn b [0])))
         as (doall (map #(actor/spawn a [%]) bs))]
     (doseq [a as]
       (actor/send a :do))
-    (Thread/sleep 500)
+    (Thread/sleep 700)
     (is (= 200 (stm/deref n-a)))
     (doseq [b bs]
       (let [p (promise)]
         (actor/send b :get p)
-        (is (= 2 @p))))))
+        (is (= 3 @p))))))
 
 (deftest order-respected-indirect
   "Test whether messages cannot get interleaved in an incorrect way.
