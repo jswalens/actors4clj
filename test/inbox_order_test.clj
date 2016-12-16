@@ -55,7 +55,7 @@
     (doseq [a as]
       (actor/send a :do))
     (Thread/sleep 700)
-    (is (= 200 (stm/deref n-a)))
+    (is (= 300 (stm/deref n-a)))
     (doseq [b bs]
       (let [p (promise)]
         (actor/send b :get p)
