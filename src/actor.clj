@@ -8,6 +8,10 @@
 ; * ACTORS INTERNALS                                                           *
 ; ******************************************************************************
 
+;; Global variable that can be used to rebind self.
+;; Rebound in `spawn`.
+(def ^:dynamic self nil)
+
 (defn patterns->match-clauses [patterns]
   "Convert patterns as given in behavior definition into clauses as expected by
   clojure.core.match/match."
@@ -77,13 +81,14 @@
 
 (defmacro spawn [initial-behavior state]
   `(let [inbox# (inbox)]
+     (binding [self inbox#]
     (future
       (loop [behavior# ~initial-behavior
              state#    ~state]
         (let [msg# (inbox-take inbox#)
               ;_#   (log "| received" msg#)
               [new-behavior# new-state#] (behavior# msg# state#)]
-          (recur (or new-behavior# behavior#) (or new-state# state#)))))
+          (recur (or new-behavior# behavior#) (or new-state# state#))))))
     inbox#))
 
 (defn send [actor & args]
