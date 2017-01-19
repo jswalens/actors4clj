@@ -1,14 +1,33 @@
-# actors-stm
+# actors4clj
 
-A Clojure library designed to ... well, that part is up to you.
+Extremely simple actors library for Clojure.
 
 ## Usage
 
-FIXME
+Example:
+
+```
+(def counter
+  (behavior [i]
+    [:get]
+      (println "count:" i)
+    [:inc]
+      (do
+        (println "count:" i "+ 1")
+        (become :self [(+ i 1)]))
+    [:add j]
+      (do
+        (println "count:" i "+" j)
+        (become :self [(+ i j)])))
+
+(def counter1 (spawn counter [0]))
+(send counter1 :inc)
+(send counter1 :add 5)
+(send counter1 :get)   ; => 6
+(send counter1 :add 4)
+(send counter1 :get)   ; => 10
+```
 
 ## License
 
-Copyright © 2016 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the MIT License.
