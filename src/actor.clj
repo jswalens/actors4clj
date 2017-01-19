@@ -1,7 +1,6 @@
 (ns actor
   (:refer-clojure :exclude [send])
   (:require [clojure.core.match :refer [match]]
-            [stm]
             [log :refer [log]])
   (:import [java.util.concurrent ConcurrentLinkedDeque]))
 
@@ -65,20 +64,16 @@
             ; with variables = [x y z] and state# = [1 2 3] this is
             ; (let [[x y z] [1 2 3]] ...)
             new-behavior-and-state#
-              (stm/ref [nil nil])
+              (atom [nil nil])
             ~'become
               (fn [behavior# state#]
                 (let [behavior_# (if (= behavior# :self) nil behavior#)]
-                  (stm/dosync
-                    ; If we're already in a transaction, this becomes part of
-                    ; the outer transaction; otherwise this simply sets the new
-                    ; behavior and state.
-                    (stm/ref-set new-behavior-and-state# [behavior_# state#]))))]
+                  (reset! new-behavior-and-state# [behavior_# state#])))]
             ; inject become
         (match [msg#]
           ~@match-clauses
           :else (println "error: message" msg# "does not match any pattern"))
-        (stm/deref new-behavior-and-state#)))))
+        @new-behavior-and-state#))))
 
 (defmacro spawn [initial-behavior state]
   `(let [inbox# (inbox)]
